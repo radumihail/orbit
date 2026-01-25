@@ -2,6 +2,8 @@ const fastify = require("fastify")({ logger: true });
 const { connectMongo, closeMongo } = require("./db/mongo");
 const dailyRoutes = require("./routes/daily");
 const weeklyRoutes = require("./routes/weekly");
+const monthlyRoutes = require("./routes/monthly");
+const yearlyRoutes = require("./routes/yearly");
 const tasksRoutes = require("./routes/tasks");
 const staticRoutes = require("./routes/static");
 
@@ -14,6 +16,8 @@ const start = async () => {
 
   fastify.register(dailyRoutes);
   fastify.register(weeklyRoutes);
+  fastify.register(monthlyRoutes);
+  fastify.register(yearlyRoutes);
   fastify.register(tasksRoutes);
   fastify.register(staticRoutes);
 

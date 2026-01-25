@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Weekly routines view for Ongoing Routines & Behavior Insight Tracker.">
+    <meta name="description" content="Monthly routines view for Ongoing Routines & Behavior Insight Tracker.">
     <meta name="author" content="">
-    <title>Ongoing Routines | Weekly View</title>
+    <title>Ongoing Routines | Monthly View</title>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
     <link href="css/sb-admin-2.min.css" rel="stylesheet">
     <link href="css/app.css" rel="stylesheet">
@@ -15,35 +15,35 @@
     <div class="app-shell">
       <header class="app-header">
         <div>
-          <div class="eyebrow">Weekly view</div>
+          <div class="eyebrow">Monthly view</div>
           <h1 class="app-title">Ongoing Routines</h1>
           <p class="app-subtitle">Behavior Insight Tracker</p>
           <div class="app-nav">
             <a class="btn btn-sm btn-outline-secondary" href="index.html">Daily</a>
-            <a class="btn btn-sm btn-primary" href="weekly.html">Weekly</a>
-            <a class="btn btn-sm btn-outline-secondary" href="monthly.html">Monthly</a>
+            <a class="btn btn-sm btn-outline-secondary" href="weekly.html">Weekly</a>
+            <a class="btn btn-sm btn-primary" href="monthly.html">Monthly</a>
             <a class="btn btn-sm btn-outline-secondary" href="yearly.html">Yearly</a>
             <a class="btn btn-sm btn-outline-secondary" href="settings.html">Settings</a>
           </div>
         </div>
         <div class="date-card">
-          <div class="date-label">Week of</div>
-          <div class="date-value" id="weekRange">Loading...</div>
-          <div class="progress-meta">
-            <span id="weekSummary">Loading summary...</span>
+          <div class="date-label">Month</div>
+          <div class="month-summary" id="monthSummary">Loading summary...</div>
+          <div class="date-controls">
+            <input class="form-control form-control-sm date-input" type="month" id="monthPicker">
           </div>
         </div>
       </header>
 
       <main>
-        <div id="weekGrid" class="week-grid">
-          <div class="text-muted small">Loading week...</div>
+        <div class="month-grid" id="monthGrid">
+          <div class="text-muted small">Loading month...</div>
         </div>
       </main>
 
-      <footer>Show up. Track it. Learn from it.</footer>
+      <footer>See patterns, not pressure.</footer>
     </div>
 
-    <script src="js/weekly.js"></script>
+    <script src="js/monthly.js"></script>
   </body>
 </html>

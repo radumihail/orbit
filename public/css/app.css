@@ -43,6 +43,26 @@ body {
   border-radius: 999px;
 }
 
+.nav-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.date-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.date-controls .btn {
+  border-radius: 999px;
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -83,6 +103,10 @@ body {
   font-size: 18px;
   font-weight: 600;
   margin-top: 6px;
+}
+
+.date-input {
+  min-width: 140px;
 }
 
 .progress {
@@ -180,6 +204,21 @@ body {
   font-size: 12px;
   color: var(--muted);
   margin-top: 4px;
+}
+
+.task-status {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.task-status.saved {
+  color: var(--accent);
+}
+
+.task-status.error {
+  color: #b42318;
 }
 
 .task-row {
@@ -298,6 +337,223 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.month-day {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 92px;
+  background: #fff;
+}
+
+.month-day.empty {
+  border: 1px dashed var(--border);
+  background: transparent;
+}
+
+.month-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.month-day-number {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.month-day-progress {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.month-day-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.month-day-link:hover {
+  text-decoration: none;
+}
+
+.month-summary {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.year-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+}
+
+.year-card-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.year-card-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.year-progress {
+  height: 8px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(320px, 2fr);
+  gap: 20px;
+}
+
+.collapsible-toggle {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.collapsible-toggle .icon {
+  transition: transform 0.2s ease;
+}
+
+.collapsible-toggle[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
+}
+
+.collapsible-panel {
+  display: none;
+  margin-top: 12px;
+}
+
+.collapsible-panel.active {
+  display: block;
+}
+
+.settings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #f9fafb;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px rgba(47, 122, 115, 0.15);
+  background: #eef6f3;
+}
+
+.settings-item-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.settings-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-pane .form-group {
+  margin-bottom: 12px;
+}
+
+.settings-pane label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1050;
+}
+
+.confirm-modal.active {
+  display: flex;
+}
+
+.confirm-modal-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+}
+
+.confirm-modal-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.confirm-modal-text {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.confirm-modal-error {
+  font-size: 12px;
+  color: #b42318;
+  margin-top: 8px;
 }
 
 .day-card {

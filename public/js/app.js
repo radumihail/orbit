@@ -2,9 +2,44 @@ const progressBar = document.getElementById("dailyProgress");
 const progressText = document.getElementById("progressText");
 const progressPercent = document.getElementById("progressPercent");
 const todayDate = document.getElementById("todayDate");
+const dateLabel = document.getElementById("dateLabel");
+const datePicker = document.getElementById("datePicker");
 const taskGroups = document.getElementById("taskGroups");
 let taskChecks = [];
 let currentDateKey = null;
+let currentDateValue = null;
+const statusTimers = new Map();
+
+const toDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateKey = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+};
+
+const updateUrlDate = (dateKey) => {
+  const params = new URLSearchParams(window.location.search);
+  if (dateKey) {
+    params.set("date", dateKey);
+  } else {
+    params.delete("date");
+  }
+  const query = params.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, "", nextUrl);
+};
 
 const updateProgress = () => {
   const total = taskChecks.length;
@@ -18,18 +53,48 @@ const updateProgress = () => {
 
 const sendUpdate = async (taskId, value) => {
   if (!currentDateKey) {
-    return;
+    return false;
   }
   try {
-    await fetch(`/api/daily/${currentDateKey}/${taskId}`, {
+    const response = await fetch(`/api/daily/${currentDateKey}/${taskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ value }),
     });
+    return response.ok;
   } catch (error) {
     console.error("Failed to update task:", error);
+    return false;
+  }
+};
+
+const setTaskStatus = (taskId, text, type = "saved") => {
+  const status = document.querySelector(
+    `.task-status[data-task-id="${taskId}"]`
+  );
+  if (!status) {
+    return;
+  }
+  status.textContent = text;
+  status.classList.remove("saved", "error");
+  if (type === "saved") {
+    status.classList.add("saved");
+  } else if (type === "error") {
+    status.classList.add("error");
+  }
+  const existingTimer = statusTimers.get(taskId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  if (type === "saved") {
+    const timer = setTimeout(() => {
+      status.textContent = "";
+      status.classList.remove("saved", "error");
+      statusTimers.delete(taskId);
+    }, 2000);
+    statusTimers.set(taskId, timer);
   }
 };
 
@@ -44,9 +109,12 @@ const wireTaskChecks = () => {
       }
       updateProgress();
     };
-    check.addEventListener("change", () => {
+    check.addEventListener("change", async () => {
       toggle();
-      sendUpdate(taskId, check.checked);
+      const ok = await sendUpdate(taskId, check.checked);
+      if (!ok) {
+        setTaskStatus(taskId, "Save failed", "error");
+      }
     });
     toggle();
   });
@@ -58,12 +126,18 @@ const wireValueInputs = () => {
   valueInputs.forEach((input) => {
     const taskId = input.dataset.taskId;
     const valueType = input.dataset.valueType;
-    const sendValue = () => {
+    const sendValue = async () => {
+      setTaskStatus(taskId, "Saving...");
       let value = input.value;
       if (valueType === "number") {
         value = value === "" ? null : Number(value);
       }
-      sendUpdate(taskId, value);
+      const ok = await sendUpdate(taskId, value);
+      if (ok) {
+        setTaskStatus(taskId, "Saved", "saved");
+      } else {
+        setTaskStatus(taskId, "Save failed", "error");
+      }
     };
     input.addEventListener("change", sendValue);
     input.addEventListener("blur", sendValue);
@@ -162,6 +236,11 @@ const renderTasks = (groups) => {
           row.appendChild(input);
         }
 
+        const status = document.createElement("span");
+        status.className = "task-status";
+        status.dataset.taskId = taskId;
+        row.appendChild(status);
+
         item.appendChild(row);
       }
 
@@ -176,135 +255,58 @@ const renderTasks = (groups) => {
   wireValueInputs();
 };
 
-const loadDaily = async () => {
+const loadDaily = async (dateKeyOverride = null) => {
   try {
-    const response = await fetch("/api/daily");
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = dateKeyOverride || params.get("date");
+    const url = dateParam
+      ? `/api/daily?date=${encodeURIComponent(dateParam)}`
+      : "/api/daily";
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Failed to load daily tasks.");
     }
     const payload = await response.json();
     const dateValue = payload.date ? new Date(payload.date) : new Date();
     currentDateKey = payload.dateKey || null;
-    todayDate.textContent = dateValue.toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    currentDateValue = dateValue;
+    if (dateLabel) {
+      dateLabel.textContent = dateParam ? "Date" : "Today";
+    }
+    if (todayDate) {
+      todayDate.textContent = dateValue.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    if (datePicker) {
+      datePicker.value = currentDateKey || "";
+    }
     renderTasks(payload.groups || []);
   } catch (error) {
     taskGroups.className = "text-muted small";
     taskGroups.textContent = "Unable to load tasks.";
-    todayDate.textContent = "Unavailable";
+    if (todayDate) {
+      todayDate.textContent = "Unavailable";
+    }
     taskChecks = [];
     updateProgress();
   }
 };
 
-const setupTaskForm = () => {
-  const form = document.getElementById("taskForm");
-  if (!form) {
-    return;
-  }
-
-  const titleInput = document.getElementById("taskTitle");
-  const groupInput = document.getElementById("taskGroup");
-  const metaInput = document.getElementById("taskMeta");
-  const valueTypeInput = document.getElementById("taskValueType");
-  const recurrenceSelect = document.getElementById("taskRecurrenceType");
-  const weeklySection = document.getElementById("weeklySection");
-  const intervalSection = document.getElementById("intervalSection");
-  const startDateInput = document.getElementById("taskStartDate");
-  const endDateInput = document.getElementById("taskEndDate");
-  const message = document.getElementById("taskFormMessage");
-
-  const setMessage = (text, isError = false) => {
-    if (!message) {
-      return;
-    }
-    message.textContent = text;
-    message.style.color = isError ? "#b42318" : "";
-  };
-
-  const updateRecurrenceVisibility = () => {
-    const type = recurrenceSelect.value;
-    weeklySection.classList.toggle("active", type === "weekly");
-    intervalSection.classList.toggle("active", type === "interval");
-  };
-
-  recurrenceSelect.addEventListener("change", updateRecurrenceVisibility);
-  updateRecurrenceVisibility();
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    setMessage("");
-
-    const title = titleInput.value.trim();
-    if (!title) {
-      setMessage("Title is required.", true);
-      return;
-    }
-
-    const payload = {
-      title,
-      group: groupInput.value.trim(),
-      meta: metaInput.value.trim(),
-      valueType: valueTypeInput.value,
-      recurrence: {
-        type: recurrenceSelect.value,
-      },
-    };
-
-    if (payload.recurrence.type === "weekly") {
-      const dayInputs = weeklySection.querySelectorAll(
-        "input[type='checkbox']:checked"
-      );
-      const daysOfWeek = Array.from(dayInputs).map((input) =>
-        Number(input.value)
-      );
-      if (!daysOfWeek.length) {
-        setMessage("Select at least one weekday.", true);
-        return;
-      }
-      payload.recurrence.daysOfWeek = daysOfWeek;
-    } else {
-      const startDate = startDateInput.value;
-      if (!startDate) {
-        setMessage("Start date is required.", true);
-        return;
-      }
-      payload.recurrence.startDate = startDate;
-      if (endDateInput.value) {
-        payload.recurrence.endDate = endDateInput.value;
-      }
-    }
-
-    try {
-      setMessage("Saving...");
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.error || "Failed to create task.");
-      }
-
-      form.reset();
-      updateRecurrenceVisibility();
-      setMessage("Task added.");
-      loadDaily();
-    } catch (error) {
-      setMessage(error.message || "Failed to create task.", true);
-    }
-  });
-};
-
 document.addEventListener("DOMContentLoaded", () => {
   loadDaily();
-  setupTaskForm();
+  if (datePicker) {
+    datePicker.addEventListener("change", () => {
+      const date = parseDateKey(datePicker.value);
+      if (!date) {
+        return;
+      }
+      const dateKey = toDateKey(date);
+      updateUrlDate(dateKey);
+      loadDaily(dateKey);
+    });
+  }
 });

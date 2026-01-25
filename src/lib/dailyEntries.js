@@ -1,5 +1,9 @@
-const { buildDailyItems } = require("./tasks");
-const { getWeekdayMondayZero } = require("./date");
+const {
+  buildDailyItems,
+  defaultValueForType,
+  taskOccursOn,
+} = require("./tasks");
+const { getWeekdayMondayZero, toDateKey } = require("./date");
 
 const getOrCreateDailyEntry = async (collections, dateKey, date) => {
   const { tasksCollection, dailyEntriesCollection } = collections;
@@ -24,4 +28,65 @@ const getOrCreateDailyEntry = async (collections, dateKey, date) => {
   return entry;
 };
 
-module.exports = { getOrCreateDailyEntry };
+const syncTaskForDate = async (collections, task, date) => {
+  const dateKey = toDateKey(date);
+  const weekday = getWeekdayMondayZero(date);
+  const occursToday = taskOccursOn(task, dateKey, weekday);
+  const nowIso = new Date().toISOString();
+
+  let entry = await collections.dailyEntriesCollection.findOne({ dateKey });
+  if (!entry && occursToday) {
+    await getOrCreateDailyEntry(collections, dateKey, date);
+    return;
+  }
+  if (!entry) {
+    return;
+  }
+
+  const items = entry.items || [];
+  const itemIndex = items.findIndex((item) => item.taskId === task.taskId);
+
+  if (!occursToday) {
+    if (itemIndex !== -1) {
+      items.splice(itemIndex, 1);
+      await collections.dailyEntriesCollection.updateOne(
+        { dateKey },
+        { $set: { items, updatedAt: nowIso } }
+      );
+    }
+    return;
+  }
+
+  if (itemIndex === -1) {
+    const [newItem] = buildDailyItems([task], dateKey, weekday, nowIso);
+    items.push(newItem);
+  } else {
+    const existing = items[itemIndex];
+    const nextValueType = task.valueType || "bool";
+    const valueTypeChanged = existing.valueType !== nextValueType;
+    const nextValue = valueTypeChanged
+      ? defaultValueForType(nextValueType)
+      : existing.value;
+    const nextCompletedAt =
+      nextValueType === "bool" && nextValue === true ? nowIso : null;
+
+    items[itemIndex] = {
+      ...existing,
+      title: task.title,
+      group: task.group || "General",
+      meta: task.meta || "",
+      valueType: nextValueType,
+      sortOrder: task.sortOrder || 0,
+      value: nextValue,
+      completedAt: nextCompletedAt,
+    };
+  }
+
+  items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  await collections.dailyEntriesCollection.updateOne(
+    { dateKey },
+    { $set: { items, updatedAt: nowIso } }
+  );
+};
+
+module.exports = { getOrCreateDailyEntry, syncTaskForDate };

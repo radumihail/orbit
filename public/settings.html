@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Settings view for editing task templates safely.">
+    <meta name="author" content="">
+    <title>Ongoing Routines | Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <div class="eyebrow">Settings</div>
+          <h1 class="app-title">Ongoing Routines</h1>
+          <p class="app-subtitle">Edit templates without changing history.</p>
+          <div class="app-nav">
+            <a class="btn btn-sm btn-outline-secondary" href="index.html">Daily</a>
+            <a class="btn btn-sm btn-outline-secondary" href="weekly.html">Weekly</a>
+            <a class="btn btn-sm btn-outline-secondary" href="monthly.html">Monthly</a>
+            <a class="btn btn-sm btn-outline-secondary" href="yearly.html">Yearly</a>
+            <a class="btn btn-sm btn-primary" href="settings.html">Settings</a>
+          </div>
+        </div>
+        <div class="date-card">
+          <div class="date-label">Templates</div>
+          <div class="date-value">Manage recurring & interval tasks</div>
+          <div class="progress-meta">
+            <span>Create and edit templates here</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="settings-grid">
+        <section class="app-card">
+          <div class="card-body">
+            <div class="section-header">
+              <h2>Task templates</h2>
+              <span class="text-muted small" id="taskCount">Loading...</span>
+            </div>
+            <div class="mb-3">
+              <button class="btn btn-sm btn-outline-primary" type="button" id="newTaskButton">
+                New task
+              </button>
+            </div>
+            <div id="taskList" class="settings-list">
+              <div class="text-muted small">Loading tasks...</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="app-card settings-pane">
+          <div class="card-body">
+            <div class="section-header">
+              <h2>Edit task</h2>
+              <span class="pill" id="taskStatus">No task selected</span>
+            </div>
+            <form id="taskEditForm">
+              <div class="form-group">
+                <label for="editTaskId">Task ID</label>
+                <input class="form-control form-control-sm" id="editTaskId" type="text" readonly>
+              </div>
+              <div class="form-group">
+                <label for="editTitle">Title</label>
+                <input class="form-control form-control-sm" id="editTitle" type="text" required>
+              </div>
+              <div class="form-group">
+                <label for="editGroup">Group</label>
+                <input class="form-control form-control-sm" id="editGroup" type="text">
+              </div>
+              <div class="form-group">
+                <label for="editMeta">Details</label>
+                <input class="form-control form-control-sm" id="editMeta" type="text">
+              </div>
+              <div class="form-group">
+                <label for="editValueType">Value type</label>
+                <select class="form-control form-control-sm" id="editValueType">
+                  <option value="bool">Checkbox (bool)</option>
+                  <option value="number">Number</option>
+                  <option value="string">Text</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="editSortOrder">Sort order</label>
+                <input class="form-control form-control-sm" id="editSortOrder" type="number" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editRecurrenceType">Recurrence</label>
+                <select class="form-control form-control-sm" id="editRecurrenceType">
+                  <option value="weekly">Weekly (days)</option>
+                  <option value="interval">Interval (date range)</option>
+                </select>
+              </div>
+              <div id="editWeeklySection" class="recurrence-section">
+                <label>Days of week</label>
+                <div class="day-picker">
+                  <label class="day-chip"><input type="checkbox" value="0"><span>Mon</span></label>
+                  <label class="day-chip"><input type="checkbox" value="1"><span>Tue</span></label>
+                  <label class="day-chip"><input type="checkbox" value="2"><span>Wed</span></label>
+                  <label class="day-chip"><input type="checkbox" value="3"><span>Thu</span></label>
+                  <label class="day-chip"><input type="checkbox" value="4"><span>Fri</span></label>
+                  <label class="day-chip"><input type="checkbox" value="5"><span>Sat</span></label>
+                  <label class="day-chip"><input type="checkbox" value="6"><span>Sun</span></label>
+                </div>
+              </div>
+              <div id="editIntervalSection" class="recurrence-section">
+                <div class="form-group">
+                  <label for="editStartDate">Start date</label>
+                  <input class="form-control form-control-sm" id="editStartDate" type="date">
+                </div>
+                <div class="form-group">
+                  <label for="editEndDate">End date (optional)</label>
+                  <input class="form-control form-control-sm" id="editEndDate" type="date">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="editActive">Active</label>
+                <select class="form-control form-control-sm" id="editActive">
+                  <option value="true">Active</option>
+                  <option value="false">Archived</option>
+                </select>
+              </div>
+              <div class="d-flex align-items-center" style="gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-primary" type="submit">Save changes</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" id="deleteTask">
+                  Delete task
+                </button>
+                <div class="custom-control custom-checkbox ml-2">
+                  <input type="checkbox" class="custom-control-input" id="deleteHistory">
+                  <label class="custom-control-label" for="deleteHistory">Delete history too</label>
+                </div>
+              </div>
+              <div id="editMessage" class="small text-muted mt-2"></div>
+            </form>
+          </div>
+        </section>
+      </main>
+
+      <section class="app-card mt-4">
+        <div class="card-body">
+          <div class="section-header">
+            <h2>Create task</h2>
+            <button class="collapsible-toggle" type="button" id="toggleCreatePanel" aria-expanded="false">
+              <span class="icon">&#9654;</span>
+              <span>Show</span>
+            </button>
+          </div>
+          <div id="createPanel" class="collapsible-panel">
+            <p class="text-muted small mb-3">Add new templates here.</p>
+            <form id="taskCreateForm" class="task-form">
+            <div class="form-group">
+              <label for="taskTitle">Title</label>
+              <input class="form-control form-control-sm" id="taskTitle" type="text" placeholder="e.g. Log weight" required>
+            </div>
+            <div class="form-group">
+              <label for="taskGroup">Group</label>
+              <input class="form-control form-control-sm" id="taskGroup" type="text" placeholder="Morning reset">
+            </div>
+            <div class="form-group">
+              <label for="taskMeta">Details</label>
+              <input class="form-control form-control-sm" id="taskMeta" type="text" placeholder="Optional note">
+            </div>
+            <div class="form-group">
+              <label for="taskValueType">Value type</label>
+              <select class="form-control form-control-sm" id="taskValueType">
+                <option value="bool">Checkbox (bool)</option>
+                <option value="number">Number</option>
+                <option value="string">Text</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="taskRecurrenceType">Recurrence</label>
+              <select class="form-control form-control-sm" id="taskRecurrenceType">
+                <option value="weekly">Weekly (days)</option>
+                <option value="interval">Interval (date range)</option>
+              </select>
+            </div>
+            <div id="weeklySection" class="recurrence-section active">
+              <label>Days of week</label>
+              <div class="day-picker">
+                <label class="day-chip"><input type="checkbox" value="0" checked><span>Mon</span></label>
+                <label class="day-chip"><input type="checkbox" value="1" checked><span>Tue</span></label>
+                <label class="day-chip"><input type="checkbox" value="2" checked><span>Wed</span></label>
+                <label class="day-chip"><input type="checkbox" value="3" checked><span>Thu</span></label>
+                <label class="day-chip"><input type="checkbox" value="4" checked><span>Fri</span></label>
+                <label class="day-chip"><input type="checkbox" value="5"><span>Sat</span></label>
+                <label class="day-chip"><input type="checkbox" value="6"><span>Sun</span></label>
+              </div>
+            </div>
+            <div id="intervalSection" class="recurrence-section">
+              <div class="form-group">
+                <label for="taskStartDate">Start date</label>
+                <input class="form-control form-control-sm" id="taskStartDate" type="date">
+              </div>
+              <div class="form-group">
+                <label for="taskEndDate">End date (optional)</label>
+                <input class="form-control form-control-sm" id="taskEndDate" type="date">
+              </div>
+            </div>
+            <button class="btn btn-sm btn-primary" type="submit">Add task</button>
+            <div id="taskFormMessage" class="small text-muted mt-2"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <footer>Edits here only affect future entries.</footer>
+    </div>
+
+    <div id="deleteModal" class="confirm-modal" aria-hidden="true">
+      <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="confirm-modal-title" id="deleteModalTitle">Confirm delete</div>
+        <div class="confirm-modal-text" id="deleteModalText"></div>
+        <div class="form-group">
+          <label for="deleteConfirmInput">Type confirmation phrase</label>
+          <input class="form-control form-control-sm" id="deleteConfirmInput" type="text" autocomplete="off">
+          <div class="confirm-modal-error" id="deleteModalError"></div>
+        </div>
+        <div class="confirm-modal-actions">
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="deleteCancel">Cancel</button>
+          <button class="btn btn-sm btn-danger" type="button" id="deleteConfirm">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/settings.js"></script>
+  </body>
+</html>

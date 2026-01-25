@@ -264,6 +264,22 @@ const buildDailyItems = (tasks, dateKey, weekday, nowIso) => {
     });
 };
 
+const isItemComplete = (item) => {
+  if (!item) {
+    return false;
+  }
+  if (item.valueType === "bool") {
+    return item.value === true;
+  }
+  if (item.valueType === "number") {
+    return item.value !== null && item.value !== undefined && item.value !== "";
+  }
+  if (item.valueType === "string") {
+    return typeof item.value === "string" && item.value.trim().length > 0;
+  }
+  return false;
+};
+
 const groupDailyItems = (items) => {
   const groups = [];
   const groupMap = new Map();
@@ -307,6 +323,7 @@ module.exports = {
   generateTaskId,
   getNextSortOrder,
   groupDailyItems,
+  isItemComplete,
   normalizeValueType,
   parseRecurrence,
   serializeDailyEntry,
