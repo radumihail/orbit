@@ -6,6 +6,7 @@ const {
   toDateKey,
 } = require("../lib/date");
 const { getOrCreateDailyEntry } = require("../lib/dailyEntries");
+const { getProfileIdFromRequest } = require("../lib/profile");
 
 const getWeekStart = (date) => {
   const offset = getWeekdayMondayZero(date);
@@ -18,6 +19,7 @@ const buildWeekDates = (startDate) => {
 
 module.exports = async function registerWeeklyRoutes(fastify) {
   fastify.get("/api/weekly", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const dateQuery = request.query && request.query.date;
     let date = new Date();
     if (dateQuery) {
@@ -36,6 +38,7 @@ module.exports = async function registerWeeklyRoutes(fastify) {
       const dateKey = toDateKey(dayDate);
       const entry = await getOrCreateDailyEntry(
         fastify.collections,
+        profileId,
         dateKey,
         dayDate
       );

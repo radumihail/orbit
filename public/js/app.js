@@ -10,6 +10,19 @@ let currentDateKey = null;
 let currentDateValue = null;
 const statusTimers = new Map();
 
+const withProfile = (url) => {
+  if (window.profile && typeof window.profile.withProfile === "function") {
+    return window.profile.withProfile(url);
+  }
+  return url;
+};
+
+const waitForProfile = async () => {
+  if (window.profile && window.profile.ready) {
+    await window.profile.ready;
+  }
+};
+
 const toDateKey = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -56,13 +69,16 @@ const sendUpdate = async (taskId, value) => {
     return false;
   }
   try {
-    const response = await fetch(`/api/daily/${currentDateKey}/${taskId}`, {
+    const response = await fetch(
+      withProfile(`/api/daily/${currentDateKey}/${taskId}`),
+      {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ value }),
-    });
+      }
+    );
     return response.ok;
   } catch (error) {
     console.error("Failed to update task:", error);
@@ -260,8 +276,8 @@ const loadDaily = async (dateKeyOverride = null) => {
     const params = new URLSearchParams(window.location.search);
     const dateParam = dateKeyOverride || params.get("date");
     const url = dateParam
-      ? `/api/daily?date=${encodeURIComponent(dateParam)}`
-      : "/api/daily";
+      ? withProfile(`/api/daily?date=${encodeURIComponent(dateParam)}`)
+      : withProfile("/api/daily");
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Failed to load daily tasks.");
@@ -297,7 +313,9 @@ const loadDaily = async (dateKeyOverride = null) => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadDaily();
+  waitForProfile().then(() => {
+    loadDaily();
+  });
   if (datePicker) {
     datePicker.addEventListener("change", () => {
       const date = parseDateKey(datePicker.value);

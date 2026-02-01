@@ -17,6 +17,10 @@ const editTitle = document.getElementById("editTitle");
 const editGroup = document.getElementById("editGroup");
 const editMeta = document.getElementById("editMeta");
 const editValueType = document.getElementById("editValueType");
+const editIsProgress = document.getElementById("editIsProgress");
+const editProgressSection = document.getElementById("editProgressSection");
+const editProgressTarget = document.getElementById("editProgressTarget");
+const editProgressPeriod = document.getElementById("editProgressPeriod");
 const editSortOrder = document.getElementById("editSortOrder");
 const editRecurrenceType = document.getElementById("editRecurrenceType");
 const editWeeklySection = document.getElementById("editWeeklySection");
@@ -30,6 +34,10 @@ const createTitle = document.getElementById("taskTitle");
 const createGroup = document.getElementById("taskGroup");
 const createMeta = document.getElementById("taskMeta");
 const createValueType = document.getElementById("taskValueType");
+const createIsProgress = document.getElementById("taskIsProgress");
+const createProgressSection = document.getElementById("createProgressSection");
+const createProgressTarget = document.getElementById("taskProgressTarget");
+const createProgressPeriod = document.getElementById("taskProgressPeriod");
 const createRecurrenceType = document.getElementById("taskRecurrenceType");
 const createWeeklySection = document.getElementById("weeklySection");
 const createIntervalSection = document.getElementById("intervalSection");
@@ -39,10 +47,26 @@ const createMessage = document.getElementById("taskFormMessage");
 const newTaskButton = document.getElementById("newTaskButton");
 const toggleCreatePanel = document.getElementById("toggleCreatePanel");
 const createPanel = document.getElementById("createPanel");
+const templateList = document.getElementById("templateList");
+const templateCount = document.getElementById("templateCount");
 
 let tasks = [];
+let templates = [];
 let selectedTaskId = null;
 let pendingDeleteHistory = false;
+
+const withProfile = (url) => {
+  if (window.profile && typeof window.profile.withProfile === "function") {
+    return window.profile.withProfile(url);
+  }
+  return url;
+};
+
+const waitForProfile = async () => {
+  if (window.profile && window.profile.ready) {
+    await window.profile.ready;
+  }
+};
 
 const setMessage = (text, isError = false) => {
   if (!editMessage) {
@@ -79,7 +103,7 @@ const closeDeleteModal = () => {
 
 const performDelete = async () => {
   const query = pendingDeleteHistory ? "?deleteHistory=true" : "";
-  const response = await fetch(`/api/tasks/${selectedTaskId}${query}`, {
+  const response = await fetch(withProfile(`/api/tasks/${selectedTaskId}${query}`), {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -94,6 +118,16 @@ const updateRecurrenceVisibility = () => {
   editIntervalSection.classList.toggle("active", type === "interval");
 };
 
+const updateProgressVisibility = () => {
+  if (!editIsProgress || !editProgressSection) {
+    return;
+  }
+  editProgressSection.classList.toggle(
+    "active",
+    editIsProgress.value === "true"
+  );
+};
+
 const updateCreateRecurrenceVisibility = () => {
   if (!createRecurrenceType) {
     return;
@@ -101,6 +135,16 @@ const updateCreateRecurrenceVisibility = () => {
   const type = createRecurrenceType.value;
   createWeeklySection.classList.toggle("active", type === "weekly");
   createIntervalSection.classList.toggle("active", type === "interval");
+};
+
+const updateCreateProgressVisibility = () => {
+  if (!createIsProgress || !createProgressSection) {
+    return;
+  }
+  createProgressSection.classList.toggle(
+    "active",
+    createIsProgress.value === "true"
+  );
 };
 
 const setCreatePanelOpen = (open) => {
@@ -139,14 +183,145 @@ const buildRecurrenceSummary = (task) => {
     if (!days.length) {
       return "Weekly";
     }
-    return `Weekly · ${days.length} day${days.length > 1 ? "s" : ""}`;
+    return `Weekly - ${days.length} day${days.length > 1 ? "s" : ""}`;
   }
   if (task.recurrence.type === "interval") {
     const start = task.recurrence.startDate || "";
     const end = task.recurrence.endDate || "open";
-    return `Interval · ${start} → ${end}`;
+    return `Interval - ${start} to ${end}`;
   }
   return "Custom";
+};
+
+const buildProgressSummary = (task) => {
+  if (!task.progress || !task.progress.enabled) {
+    return "";
+  }
+  const target = task.progress.target;
+  const period = task.progress.period || "daily";
+  if (typeof target === "number") {
+    return `Progress target ${target} / ${period}`;
+  }
+  return "Progress target";
+};
+
+const renderTemplates = () => {
+  if (!templateList) {
+    return;
+  }
+  templateList.innerHTML = "";
+  if (templateCount) {
+    templateCount.textContent = `${templates.length} available`;
+  }
+  if (!templates.length) {
+    templateList.innerHTML =
+      '<div class="text-muted small">No templates yet.</div>';
+    return;
+  }
+
+  templates.forEach((template) => {
+    const item = document.createElement("div");
+    item.className = "template-item";
+
+    const info = document.createElement("div");
+    info.className = "template-info";
+
+    const title = document.createElement("div");
+    title.className = "template-title";
+    title.textContent = template.title;
+
+    const meta = document.createElement("div");
+    meta.className = "template-meta";
+    const parts = [
+      template.group || "General",
+      buildRecurrenceSummary(template),
+    ];
+    const progressSummary = buildProgressSummary(template);
+    if (progressSummary) {
+      parts.push(progressSummary);
+    }
+    meta.textContent = parts.filter(Boolean).join(" - ");
+
+    info.appendChild(title);
+    info.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "template-actions";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-sm btn-outline-primary";
+    button.textContent = "Use template";
+    button.addEventListener("click", () => createFromTemplate(template, button));
+    actions.appendChild(button);
+
+    item.appendChild(info);
+    item.appendChild(actions);
+    templateList.appendChild(item);
+  });
+};
+
+const createFromTemplate = async (template, button) => {
+  if (!template || !template.templateId) {
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Adding...";
+  }
+  try {
+    setMessage("Adding template...");
+    const response = await fetch(withProfile("/api/tasks"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ templateId: template.templateId }),
+    });
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.error || "Failed to create task.");
+    }
+    const data = await response.json();
+    tasks = [...tasks, data.task].sort((a, b) => {
+      if (a.group === b.group) {
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      }
+      return String(a.group || "").localeCompare(String(b.group || ""));
+    });
+    renderList();
+    if (data.task && data.task.taskId) {
+      selectTask(data.task.taskId);
+    }
+    setMessage("Template added.");
+  } catch (error) {
+    setMessage(error.message || "Failed to add template.", true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Use template";
+    }
+  }
+};
+
+const loadTemplates = async () => {
+  if (!templateList) {
+    return;
+  }
+  try {
+    const response = await fetch(withProfile("/api/templates"));
+    if (!response.ok) {
+      throw new Error("Failed to load templates.");
+    }
+    const payload = await response.json();
+    templates = payload.templates || [];
+    renderTemplates();
+  } catch (error) {
+    templateList.innerHTML =
+      '<div class="text-muted small">Unable to load templates.</div>';
+    if (templateCount) {
+      templateCount.textContent = "Unavailable";
+    }
+  }
 };
 
 const renderList = () => {
@@ -171,7 +346,15 @@ const renderList = () => {
 
     const meta = document.createElement("div");
     meta.className = "settings-item-meta";
-    meta.textContent = `${task.group || "General"} · ${buildRecurrenceSummary(task)}`;
+    const parts = [
+      task.group || "General",
+      buildRecurrenceSummary(task),
+    ];
+    const progressSummary = buildProgressSummary(task);
+    if (progressSummary) {
+      parts.push(progressSummary);
+    }
+    meta.textContent = parts.filter(Boolean).join(" - ");
 
     item.appendChild(title);
     item.appendChild(meta);
@@ -193,6 +376,19 @@ const selectTask = (taskId) => {
   editGroup.value = task.group || "";
   editMeta.value = task.meta || "";
   editValueType.value = task.valueType || "bool";
+  const progressEnabled = Boolean(task.progress && task.progress.enabled);
+  if (editIsProgress) {
+    editIsProgress.value = progressEnabled ? "true" : "false";
+  }
+  if (editProgressTarget) {
+    editProgressTarget.value =
+      progressEnabled && typeof task.progress.target === "number"
+        ? task.progress.target
+        : "";
+  }
+  if (editProgressPeriod) {
+    editProgressPeriod.value = task.progress?.period || "daily";
+  }
   editSortOrder.value =
     task.sortOrder === undefined || task.sortOrder === null ? "" : task.sortOrder;
   editActive.value = task.active === false ? "false" : "true";
@@ -214,6 +410,7 @@ const selectTask = (taskId) => {
   }
 
   updateRecurrenceVisibility();
+  updateProgressVisibility();
   setFormEnabled(true);
   setMessage("");
   renderList();
@@ -221,7 +418,7 @@ const selectTask = (taskId) => {
 
 const loadTasks = async () => {
   try {
-    const response = await fetch("/api/tasks");
+    const response = await fetch(withProfile("/api/tasks"));
     if (!response.ok) {
       throw new Error("Failed to load tasks.");
     }
@@ -246,6 +443,10 @@ const loadTasks = async () => {
 
 editRecurrenceType.addEventListener("change", updateRecurrenceVisibility);
 updateRecurrenceVisibility();
+if (editIsProgress) {
+  editIsProgress.addEventListener("change", updateProgressVisibility);
+  updateProgressVisibility();
+}
 setFormEnabled(false);
 
 if (createRecurrenceType) {
@@ -254,6 +455,10 @@ if (createRecurrenceType) {
     updateCreateRecurrenceVisibility
   );
   updateCreateRecurrenceVisibility();
+}
+if (createIsProgress) {
+  createIsProgress.addEventListener("change", updateCreateProgressVisibility);
+  updateCreateProgressVisibility();
 }
 
 if (toggleCreatePanel) {
@@ -297,6 +502,21 @@ editForm.addEventListener("submit", async (event) => {
     active: editActive.value === "true",
   };
 
+  if (editIsProgress && editIsProgress.value === "true") {
+    const targetValue = Number(editProgressTarget.value);
+    if (!Number.isFinite(targetValue)) {
+      setMessage("Progress target must be a number.", true);
+      return;
+    }
+    payload.progress = {
+      enabled: true,
+      target: targetValue,
+      period: editProgressPeriod ? editProgressPeriod.value : "daily",
+    };
+  } else {
+    payload.progress = { enabled: false };
+  }
+
   if (editSortOrder.value !== "") {
     payload.sortOrder = Number(editSortOrder.value);
   }
@@ -329,7 +549,7 @@ editForm.addEventListener("submit", async (event) => {
 
   try {
     setMessage("Saving...");
-    const response = await fetch(`/api/tasks/${selectedTaskId}`, {
+    const response = await fetch(withProfile(`/api/tasks/${selectedTaskId}`), {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -370,6 +590,23 @@ if (createForm) {
       },
     };
 
+    if (createIsProgress && createIsProgress.value === "true") {
+      const targetValue = Number(createProgressTarget.value);
+      if (!Number.isFinite(targetValue)) {
+        if (createMessage) {
+          createMessage.textContent = "Progress target must be a number.";
+        }
+        return;
+      }
+      payload.progress = {
+        enabled: true,
+        target: targetValue,
+        period: createProgressPeriod ? createProgressPeriod.value : "daily",
+      };
+    } else {
+      payload.progress = { enabled: false };
+    }
+
     if (payload.recurrence.type === "weekly") {
       const dayInputs = createWeeklySection.querySelectorAll(
         "input[type='checkbox']:checked"
@@ -402,7 +639,7 @@ if (createForm) {
       if (createMessage) {
         createMessage.textContent = "Saving...";
       }
-      const response = await fetch("/api/tasks", {
+      const response = await fetch(withProfile("/api/tasks"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -431,6 +668,7 @@ if (createForm) {
       }
       createForm.reset();
       updateCreateRecurrenceVisibility();
+      updateCreateProgressVisibility();
       setCreatePanelOpen(false);
       if (createMessage) {
         createMessage.textContent = "Task added.";
@@ -505,5 +743,8 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadTasks();
+  waitForProfile().then(() => {
+    loadTasks();
+    loadTemplates();
+  });
 });

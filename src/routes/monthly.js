@@ -1,5 +1,6 @@
 const { buildDailyItems, isItemComplete } = require("../lib/tasks");
 const { fromDateKey, getWeekdayMondayZero, toDateKey } = require("../lib/date");
+const { getProfileIdFromRequest, profileFilter } = require("../lib/profile");
 
 const getMonthStart = (date) => {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -41,6 +42,7 @@ const buildDaySummary = (date, tasks, entriesMap) => {
 
 module.exports = async function registerMonthlyRoutes(fastify) {
   fastify.get("/api/monthly", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const dateQuery = request.query && request.query.date;
     let date = new Date();
     if (dateQuery) {
@@ -56,11 +58,12 @@ module.exports = async function registerMonthlyRoutes(fastify) {
     const startKey = toDateKey(monthStart);
     const endKey = toDateKey(monthEnd);
 
+    const profileQuery = profileFilter(profileId);
     const tasks = await fastify.collections.tasksCollection
-      .find({ active: true })
+      .find({ ...profileQuery, active: true })
       .toArray();
     const entries = await fastify.collections.dailyEntriesCollection
-      .find({ dateKey: { $gte: startKey, $lte: endKey } })
+      .find({ ...profileQuery, dateKey: { $gte: startKey, $lte: endKey } })
       .toArray();
     const entriesMap = new Map(entries.map((entry) => [entry.dateKey, entry]));
 

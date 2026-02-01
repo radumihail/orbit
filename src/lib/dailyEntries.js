@@ -4,19 +4,27 @@ const {
   taskOccursOn,
 } = require("./tasks");
 const { getWeekdayMondayZero, toDateKey } = require("./date");
+const { profileFilter, normalizeProfileId } = require("./profile");
 
-const getOrCreateDailyEntry = async (collections, dateKey, date) => {
+const getOrCreateDailyEntry = async (collections, profileId, dateKey, date) => {
   const { tasksCollection, dailyEntriesCollection } = collections;
-  const existing = await dailyEntriesCollection.findOne({ dateKey });
+  const profileQuery = profileFilter(profileId);
+  const existing = await dailyEntriesCollection.findOne({
+    ...profileQuery,
+    dateKey,
+  });
   if (existing) {
     return existing;
   }
 
-  const tasks = await tasksCollection.find({ active: true }).toArray();
+  const tasks = await tasksCollection
+    .find({ ...profileQuery, active: true })
+    .toArray();
   const weekday = getWeekdayMondayZero(date);
   const nowIso = new Date().toISOString();
   const items = buildDailyItems(tasks, dateKey, weekday, nowIso);
   const entry = {
+    profileId: normalizeProfileId(profileId),
     dateKey,
     date: date.toISOString(),
     items,
@@ -29,14 +37,19 @@ const getOrCreateDailyEntry = async (collections, dateKey, date) => {
 };
 
 const syncTaskForDate = async (collections, task, date) => {
+  const profileId = task.profileId || "default";
+  const profileQuery = profileFilter(profileId);
   const dateKey = toDateKey(date);
   const weekday = getWeekdayMondayZero(date);
   const occursToday = taskOccursOn(task, dateKey, weekday);
   const nowIso = new Date().toISOString();
 
-  let entry = await collections.dailyEntriesCollection.findOne({ dateKey });
+  let entry = await collections.dailyEntriesCollection.findOne({
+    ...profileQuery,
+    dateKey,
+  });
   if (!entry && occursToday) {
-    await getOrCreateDailyEntry(collections, dateKey, date);
+    await getOrCreateDailyEntry(collections, profileId, dateKey, date);
     return;
   }
   if (!entry) {
@@ -50,7 +63,7 @@ const syncTaskForDate = async (collections, task, date) => {
     if (itemIndex !== -1) {
       items.splice(itemIndex, 1);
       await collections.dailyEntriesCollection.updateOne(
-        { dateKey },
+        { ...profileQuery, dateKey },
         { $set: { items, updatedAt: nowIso } }
       );
     }
@@ -84,7 +97,7 @@ const syncTaskForDate = async (collections, task, date) => {
 
   items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   await collections.dailyEntriesCollection.updateOne(
-    { dateKey },
+    { ...profileQuery, dateKey },
     { $set: { items, updatedAt: nowIso } }
   );
 };

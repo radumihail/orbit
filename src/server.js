@@ -4,6 +4,8 @@ const dailyRoutes = require("./routes/daily");
 const weeklyRoutes = require("./routes/weekly");
 const monthlyRoutes = require("./routes/monthly");
 const yearlyRoutes = require("./routes/yearly");
+const profilesRoutes = require("./routes/profiles");
+const templatesRoutes = require("./routes/templates");
 const tasksRoutes = require("./routes/tasks");
 const staticRoutes = require("./routes/static");
 
@@ -18,6 +20,8 @@ const start = async () => {
   fastify.register(weeklyRoutes);
   fastify.register(monthlyRoutes);
   fastify.register(yearlyRoutes);
+  fastify.register(profilesRoutes);
+  fastify.register(templatesRoutes);
   fastify.register(tasksRoutes);
   fastify.register(staticRoutes);
 

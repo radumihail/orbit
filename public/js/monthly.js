@@ -4,6 +4,19 @@ const monthPicker = document.getElementById("monthPicker");
 
 let currentMonthDate = null;
 
+const withProfile = (url) => {
+  if (window.profile && typeof window.profile.withProfile === "function") {
+    return window.profile.withProfile(url);
+  }
+  return url;
+};
+
+const waitForProfile = async () => {
+  if (window.profile && window.profile.ready) {
+    await window.profile.ready;
+  }
+};
+
 const mondayIndex = (date) => {
   return (date.getDay() + 6) % 7;
 };
@@ -103,7 +116,9 @@ const loadMonth = async () => {
     const dateParam = params.get("date");
     const targetDate = parseMonthParam(dateParam);
     updateUrlMonth(targetDate);
-    const url = `/api/monthly?date=${encodeURIComponent(`${toMonthValue(targetDate)}-01`)}`;
+    const url = withProfile(
+      `/api/monthly?date=${encodeURIComponent(`${toMonthValue(targetDate)}-01`)}`
+    );
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Failed to load monthly tasks.");
@@ -119,7 +134,9 @@ const loadMonth = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadMonth();
+  waitForProfile().then(() => {
+    loadMonth();
+  });
   if (monthPicker) {
     monthPicker.addEventListener("change", () => {
       const value = monthPicker.value;

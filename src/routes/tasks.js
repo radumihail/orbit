@@ -9,11 +9,35 @@ const {
 } = require("../lib/tasks");
 const { getWeekdayMondayZero, toDateKey } = require("../lib/date");
 const { getOrCreateDailyEntry, syncTaskForDate } = require("../lib/dailyEntries");
+const { getProfileIdFromRequest, normalizeProfileId, profileFilter } = require("../lib/profile");
+
+const parseProgress = (progress) => {
+  if (!progress || typeof progress !== "object") {
+    return { progress: null };
+  }
+  if (progress.enabled === true) {
+    const target = Number(progress.target);
+    if (!Number.isFinite(target)) {
+      return { error: "Progress target must be a number." };
+    }
+    const allowedPeriods = new Set(["daily", "weekly", "monthly", "yearly"]);
+    const period = allowedPeriods.has(progress.period)
+      ? progress.period
+      : "daily";
+    return { progress: { enabled: true, target, period } };
+  }
+  if (progress.enabled === false) {
+    return { progress: { enabled: false } };
+  }
+  return { progress: null };
+};
 
 module.exports = async function registerTasksRoutes(fastify) {
-  fastify.get("/api/tasks", async () => {
+  fastify.get("/api/tasks", async (request) => {
+    const profileId = getProfileIdFromRequest(request);
+    const profileQuery = profileFilter(profileId);
     const tasks = await fastify.collections.tasksCollection
-      .find({})
+      .find({ ...profileQuery })
       .sort({ group: 1, sortOrder: 1, title: 1 })
       .toArray();
     return { tasks };
@@ -24,32 +48,59 @@ module.exports = async function registerTasksRoutes(fastify) {
       return reply.code(500).send({ error: "Database not initialized." });
     }
 
+    const profileId = getProfileIdFromRequest(request);
     const payload = request.body || {};
+    let template = null;
+    if (payload.templateId) {
+      template = await fastify.collections.templatesCollection.findOne({
+        templateId: String(payload.templateId),
+      });
+      if (!template) {
+        return reply.code(404).send({ error: "Template not found." });
+      }
+    }
+
+    const base = template || {};
     const title = String(payload.title || "").trim();
-    if (!title) {
+    const resolvedTitle = title || base.title;
+    if (!resolvedTitle) {
       return reply.code(400).send({ error: "Title is required." });
     }
 
-    const group = String(payload.group || "General").trim() || "General";
-    const meta = String(payload.meta || "").trim();
-    const { recurrence, error } = parseRecurrence(payload);
+    const group = String(payload.group || base.group || "General").trim() || "General";
+    const meta = String(payload.meta || base.meta || "").trim();
+    const { recurrence, error } = parseRecurrence(
+      payload.recurrence ? payload : { recurrence: base.recurrence }
+    );
     if (error) {
       return reply.code(400).send({ error });
     }
 
-    const valueType = normalizeValueType(payload.valueType);
+    const progressResult = parseProgress(
+      payload.progress !== undefined ? payload.progress : base.progress
+    );
+    if (progressResult.error) {
+      return reply.code(400).send({ error: progressResult.error });
+    }
+
+    const valueType = normalizeValueType(payload.valueType || base.valueType);
     const defaultValue =
       payload.defaultValue !== undefined
         ? payload.defaultValue
         : defaultValueForType(valueType);
     const sortOrder = Number.isFinite(payload.sortOrder)
       ? payload.sortOrder
-      : await getNextSortOrder(fastify.collections.tasksCollection, group);
+      : await getNextSortOrder(
+          fastify.collections.tasksCollection,
+          profileFilter(profileId),
+          group
+        );
     const nowIso = new Date().toISOString();
 
     const task = {
-      taskId: generateTaskId(title),
-      title,
+      profileId: normalizeProfileId(profileId),
+      taskId: generateTaskId(resolvedTitle),
+      title: resolvedTitle,
       group,
       meta,
       recurrence,
@@ -60,18 +111,23 @@ module.exports = async function registerTasksRoutes(fastify) {
       createdAt: nowIso,
       updatedAt: nowIso,
     };
+    if (progressResult.progress) {
+      task.progress = progressResult.progress;
+    }
 
     await fastify.collections.tasksCollection.insertOne(task);
 
     const today = new Date();
     const dateKey = toDateKey(today);
     const weekday = getWeekdayMondayZero(today);
+    const profileQuery = profileFilter(profileId);
     if (taskOccursOn(task, dateKey, weekday)) {
       const entry = await fastify.collections.dailyEntriesCollection.findOne({
+        ...profileQuery,
         dateKey,
       });
       if (!entry) {
-        await getOrCreateDailyEntry(fastify.collections, dateKey, today);
+        await getOrCreateDailyEntry(fastify.collections, profileId, dateKey, today);
       } else {
         const items = entry.items || [];
         const exists = items.some((item) => item.taskId === task.taskId);
@@ -85,7 +141,7 @@ module.exports = async function registerTasksRoutes(fastify) {
           items.push(newItem);
           items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
           await fastify.collections.dailyEntriesCollection.updateOne(
-            { dateKey },
+            { ...profileQuery, dateKey },
             { $set: { items, updatedAt: nowIso } }
           );
         }
@@ -96,8 +152,11 @@ module.exports = async function registerTasksRoutes(fastify) {
   });
 
   fastify.patch("/api/tasks/:taskId", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const { taskId } = request.params || {};
+    const profileQuery = profileFilter(profileId);
     const existing = await fastify.collections.tasksCollection.findOne({
+      ...profileQuery,
       taskId,
     });
     if (!existing) {
@@ -160,10 +219,18 @@ module.exports = async function registerTasksRoutes(fastify) {
       updates.defaultValue = defaultValueForType(normalizedValueType);
     }
 
+    if (Object.prototype.hasOwnProperty.call(payload, "progress")) {
+      const progressResult = parseProgress(payload.progress);
+      if (progressResult.error) {
+        return reply.code(400).send({ error: progressResult.error });
+      }
+      updates.progress = progressResult.progress || { enabled: false };
+    }
+
     updates.updatedAt = new Date().toISOString();
 
     await fastify.collections.tasksCollection.updateOne(
-      { taskId },
+      { ...profileQuery, taskId },
       { $set: updates }
     );
 
@@ -174,8 +241,11 @@ module.exports = async function registerTasksRoutes(fastify) {
   });
 
   fastify.delete("/api/tasks/:taskId", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const { taskId } = request.params || {};
+    const profileQuery = profileFilter(profileId);
     const existing = await fastify.collections.tasksCollection.findOne({
+      ...profileQuery,
       taskId,
     });
     if (!existing) {
@@ -184,11 +254,16 @@ module.exports = async function registerTasksRoutes(fastify) {
 
     const deleteHistory =
       String(request.query?.deleteHistory || "false").toLowerCase() === "true";
-    await fastify.collections.tasksCollection.deleteOne({ taskId });
+    await fastify.collections.tasksCollection.deleteOne({
+      ...profileQuery,
+      taskId,
+    });
 
     const todayKey = toDateKey(new Date());
     const nowIso = new Date().toISOString();
-    const dateFilter = deleteHistory ? {} : { dateKey: { $gte: todayKey } };
+    const dateFilter = deleteHistory
+      ? { ...profileQuery }
+      : { ...profileQuery, dateKey: { $gte: todayKey } };
     await fastify.collections.dailyEntriesCollection.updateMany(
       dateFilter,
       { $pull: { items: { taskId } }, $set: { updatedAt: nowIso } }

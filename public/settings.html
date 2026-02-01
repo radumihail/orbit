@@ -18,6 +18,11 @@
           <div class="eyebrow">Settings</div>
           <h1 class="app-title">Ongoing Routines</h1>
           <p class="app-subtitle">Edit templates without changing history.</p>
+          <div class="profile-controls">
+            <span class="profile-label">Profile</span>
+            <select class="form-control form-control-sm date-input" id="profileSelect"></select>
+            <button class="btn btn-sm btn-outline-secondary" type="button" id="newProfileButton">New</button>
+          </div>
           <div class="app-nav">
             <a class="btn btn-sm btn-outline-secondary" href="index.html">Daily</a>
             <a class="btn btn-sm btn-outline-secondary" href="weekly.html">Weekly</a>
@@ -85,6 +90,28 @@
                 </select>
               </div>
               <div class="form-group">
+                <label for="editIsProgress">Progress task</label>
+                <select class="form-control form-control-sm" id="editIsProgress">
+                  <option value="false">Standard</option>
+                  <option value="true">Track progress</option>
+                </select>
+              </div>
+              <div id="editProgressSection" class="progress-section">
+                <div class="form-group">
+                  <label for="editProgressTarget">Target value</label>
+                  <input class="form-control form-control-sm" id="editProgressTarget" type="number" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="editProgressPeriod">Target period</label>
+                  <select class="form-control form-control-sm" id="editProgressPeriod">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
                 <label for="editSortOrder">Sort order</label>
                 <input class="form-control form-control-sm" id="editSortOrder" type="number" min="0">
               </div>
@@ -138,6 +165,21 @@
             </form>
           </div>
         </section>
+
+        <section class="app-card">
+          <div class="card-body">
+            <div class="section-header">
+              <h2>Template library</h2>
+              <span class="text-muted small" id="templateCount">Loading...</span>
+            </div>
+            <p class="text-muted small mb-3">
+              Quick-start ideas you can add to this profile.
+            </p>
+            <div id="templateList" class="template-list">
+              <div class="text-muted small">Loading templates...</div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <section class="app-card mt-4">
@@ -171,6 +213,28 @@
                 <option value="number">Number</option>
                 <option value="string">Text</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="taskIsProgress">Progress task</label>
+              <select class="form-control form-control-sm" id="taskIsProgress">
+                <option value="false">Standard</option>
+                <option value="true">Track progress</option>
+              </select>
+            </div>
+            <div id="createProgressSection" class="progress-section">
+              <div class="form-group">
+                <label for="taskProgressTarget">Target value</label>
+                <input class="form-control form-control-sm" id="taskProgressTarget" type="number" step="0.01">
+              </div>
+              <div class="form-group">
+                <label for="taskProgressPeriod">Target period</label>
+                <select class="form-control form-control-sm" id="taskProgressPeriod">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
             </div>
             <div class="form-group">
               <label for="taskRecurrenceType">Recurrence</label>
@@ -227,6 +291,7 @@
       </div>
     </div>
 
+    <script src="js/profile.js"></script>
     <script src="js/settings.js"></script>
   </body>
 </html>

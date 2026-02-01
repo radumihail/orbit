@@ -43,6 +43,21 @@ body {
   border-radius: 999px;
 }
 
+.profile-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
 .nav-controls {
   display: flex;
   flex-wrap: wrap;
@@ -295,6 +310,14 @@ body {
   display: block;
 }
 
+.progress-section {
+  display: none;
+}
+
+.progress-section.active {
+  display: block;
+}
+
 .focus-chip {
   display: inline-block;
   background: var(--accent-soft);
@@ -460,6 +483,42 @@ body {
 .settings-list {
   display: grid;
   gap: 10px;
+}
+
+.template-list {
+  display: grid;
+  gap: 10px;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #f9fafb;
+}
+
+.template-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-title {
+  font-weight: 600;
+}
+
+.template-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.template-actions {
+  flex-shrink: 0;
 }
 
 .settings-item {

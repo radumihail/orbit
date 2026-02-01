@@ -3,6 +3,19 @@ const weekSummary = document.getElementById("weekSummary");
 const weekGrid = document.getElementById("weekGrid");
 const statusTimers = new Map();
 
+const withProfile = (url) => {
+  if (window.profile && typeof window.profile.withProfile === "function") {
+    return window.profile.withProfile(url);
+  }
+  return url;
+};
+
+const waitForProfile = async () => {
+  if (window.profile && window.profile.ready) {
+    await window.profile.ready;
+  }
+};
+
 const formatDate = (date, options) => {
   return date.toLocaleDateString(undefined, options);
 };
@@ -34,13 +47,16 @@ const isTaskComplete = (task) => {
 
 const sendUpdate = async (dateKey, taskId, value) => {
   try {
-    const response = await fetch(`/api/daily/${dateKey}/${taskId}`, {
+    const response = await fetch(
+      withProfile(`/api/daily/${dateKey}/${taskId}`),
+      {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ value }),
-    });
+      }
+    );
     return response.ok;
   } catch (error) {
     console.error("Failed to update task:", error);
@@ -89,7 +105,7 @@ const updateDayProgress = (card) => {
     if (input.dataset.valueType === "number") {
       return input.value !== "";
     }
-    return input.value.trim().length > 0;
+    return (input.value || "").trim().length > 0;
   }).length;
   const progress = card.querySelector(".day-progress");
   if (progress) {
@@ -331,8 +347,8 @@ const loadWeek = async () => {
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get("date");
     const url = dateParam
-      ? `/api/weekly?date=${encodeURIComponent(dateParam)}`
-      : "/api/weekly";
+      ? withProfile(`/api/weekly?date=${encodeURIComponent(dateParam)}`)
+      : withProfile("/api/weekly");
     const response = await fetch(url);
     if (!response.ok) {
       let errorMessage = "Failed to load weekly tasks.";
@@ -359,5 +375,7 @@ const loadWeek = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadWeek();
+  waitForProfile().then(() => {
+    loadWeek();
+  });
 });

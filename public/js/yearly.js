@@ -4,6 +4,19 @@ const yearPicker = document.getElementById("yearPicker");
 
 let currentYear = null;
 
+const withProfile = (url) => {
+  if (window.profile && typeof window.profile.withProfile === "function") {
+    return window.profile.withProfile(url);
+  }
+  return url;
+};
+
+const waitForProfile = async () => {
+  if (window.profile && window.profile.ready) {
+    await window.profile.ready;
+  }
+};
+
 const monthName = (date) => {
   return date.toLocaleDateString(undefined, { month: "long" });
 };
@@ -70,8 +83,8 @@ const loadYear = async () => {
     const dateParam = params.get("date");
     const yearParam = dateParam && /^\d{4}$/.test(dateParam) ? dateParam : null;
     const url = yearParam
-      ? `/api/yearly?date=${encodeURIComponent(`${yearParam}-01-01`)}`
-      : "/api/yearly";
+      ? withProfile(`/api/yearly?date=${encodeURIComponent(`${yearParam}-01-01`)}`)
+      : withProfile("/api/yearly");
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Failed to load yearly tasks.");
@@ -87,7 +100,9 @@ const loadYear = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadYear();
+  waitForProfile().then(() => {
+    loadYear();
+  });
   if (yearPicker) {
     yearPicker.addEventListener("change", () => {
       const yearValue = Number(yearPicker.value);

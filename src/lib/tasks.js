@@ -303,9 +303,9 @@ const serializeDailyEntry = (entry) => {
   };
 };
 
-const getNextSortOrder = async (tasksCollection, group) => {
+const getNextSortOrder = async (tasksCollection, profileFilter, group) => {
   const latest = await tasksCollection
-    .find({ group })
+    .find({ ...profileFilter, group })
     .sort({ sortOrder: -1 })
     .limit(1)
     .toArray();

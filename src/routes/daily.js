@@ -1,9 +1,11 @@
 const { serializeDailyEntry } = require("../lib/tasks");
 const { fromDateKey, toDateKey } = require("../lib/date");
 const { getOrCreateDailyEntry } = require("../lib/dailyEntries");
+const { getProfileIdFromRequest, profileFilter } = require("../lib/profile");
 
 module.exports = async function registerDailyRoutes(fastify) {
   fastify.get("/api/daily", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const dateQuery = request.query && request.query.date;
     let date = new Date();
     if (dateQuery) {
@@ -17,6 +19,7 @@ module.exports = async function registerDailyRoutes(fastify) {
     const dateKey = toDateKey(date);
     const entry = await getOrCreateDailyEntry(
       fastify.collections,
+      profileId,
       dateKey,
       date
     );
@@ -24,6 +27,7 @@ module.exports = async function registerDailyRoutes(fastify) {
   });
 
   fastify.patch("/api/daily/:dateKey/:taskId", async (request, reply) => {
+    const profileId = getProfileIdFromRequest(request);
     const { dateKey, taskId } = request.params || {};
     const date = fromDateKey(String(dateKey));
     if (!date) {
@@ -37,6 +41,7 @@ module.exports = async function registerDailyRoutes(fastify) {
 
     const entry = await getOrCreateDailyEntry(
       fastify.collections,
+      profileId,
       dateKey,
       date
     );
@@ -55,8 +60,9 @@ module.exports = async function registerDailyRoutes(fastify) {
     }
 
     const updatedAt = new Date().toISOString();
+    const profileQuery = profileFilter(profileId);
     await fastify.collections.dailyEntriesCollection.updateOne(
-      { dateKey },
+      { ...profileQuery, dateKey },
       { $set: { items, updatedAt } }
     );
 
